@@ -1,0 +1,6 @@
+@HealthifyAPI_HostAddress = http://localhost:5036
+
+GET {{HealthifyAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
