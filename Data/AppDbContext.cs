@@ -7,21 +7,21 @@ namespace HealthifyAPI.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Usuario> Usuarios { get; set; }
-       // public DbSet<Cliente> Clientes { get; set; }
-        //public DbSet<Nutricionista> Nutricionistas { get; set; }
-        //public DbSet<Consulta> Consultas { get; set; }
-        //public DbSet<PlanoAlimentar> PlanosAlimentares { get; set; }
-        //public DbSet<Receita> Receitas { get; set; }
-        //public DbSet<PlanoReceita> PlanoReceitas { get; set; }
-        //public DbSet<ProgressoCliente> ProgressoClientes { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; } = null!;
+        public DbSet<Cliente> Clientes { get; set; } = null!;
+        public DbSet<Nutricionista> Nutricionistas { get; set; } = null!;
+        public DbSet<Consulta> Consultas { get; set; } = null!;
+        public DbSet<PlanoAlimentar> PlanosAlimentares { get; set; } = null!;
+        public DbSet<Receita> Receitas { get; set; } = null!;
+        public DbSet<PlanoReceita> PlanoReceitas { get; set; } = null!;
+        public DbSet<ProgressoCliente> ProgressoCliente { get; set; } = null!;
 
-        //protected override void OnModelCreating(ModelBuilder modelBuilder)
-        //{
-        //    modelBuilder.Entity<PlanoReceita>()
-       //         .HasKey(pr => new { pr.PlanoId, pr.ReceitaId });
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PlanoReceita>()
+               .HasKey(pr => new { pr.PlanoId, pr.ReceitaId });
 
-        //    base.OnModelCreating(modelBuilder);
-        //}
+            base.OnModelCreating(modelBuilder);
+        }
     }
 }
