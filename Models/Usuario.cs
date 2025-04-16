@@ -18,9 +18,25 @@ namespace HealthifyAPI.Models
 
         [Required]
         [JsonPropertyName("senha")]
-        public string? SenhaHash { get; set; }
+        public string? senha { get; set; }
         
         [Required]
         public string? TipoUsuario { get; set; }
+
+        [Required]
+        public string? cpf { get; set; }
+
+        [Required]
+        public string? telefone { get; set; }
+
+        // Campos adicionais
+        [Required]
+        public string? DataNascimento { get; set; } // Data de Nascimento
+
+        [Required]
+        public string? Sexo { get; set; } // Sexo
+
+        [Required]
+        public string? Endereco { get; set; } // Endereço
     }
 }
