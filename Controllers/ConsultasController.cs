@@ -17,10 +17,22 @@ namespace HealthifyAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Consulta>>> GetConsultas()
-        {
-            return await _context.Consultas.ToListAsync();
-        }
+public async Task<ActionResult<IEnumerable<Consulta>>> GetConsultas(int? clienteId, int? nutricionistaId, string status)
+{
+    var consultas = _context.Consultas.AsQueryable();
+
+    if (clienteId.HasValue)
+        consultas = consultas.Where(c => c.ClienteId == clienteId.Value);
+
+    if (nutricionistaId.HasValue)
+        consultas = consultas.Where(c => c.NutricionistaId == nutricionistaId.Value);
+
+    if (!string.IsNullOrEmpty(status))
+        consultas = consultas.Where(c => c.Status == status);
+
+    return await consultas.ToListAsync();
+}
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Consulta>> GetConsulta(int id)
@@ -31,12 +43,22 @@ namespace HealthifyAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Consulta>> PostConsulta(Consulta consulta)
-        {
-            _context.Consultas.Add(consulta);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetConsulta), new { id = consulta.ConsultaId }, consulta);
-        }
+public async Task<ActionResult<Consulta>> PostConsulta(Consulta consulta)
+{
+    // Verifica se o ClienteId e NutricionistaId são válidos
+    var clienteExistente = await _context.Clientes.FindAsync(consulta.ClienteId);
+    var nutricionistaExistente = await _context.Nutricionistas.FindAsync(consulta.NutricionistaId);
+
+    if (clienteExistente == null || nutricionistaExistente == null)
+    {
+        return BadRequest("Cliente ou Nutricionista inválido.");
+    }
+
+    _context.Consultas.Add(consulta);
+    await _context.SaveChangesAsync();
+    return CreatedAtAction(nameof(GetConsulta), new { id = consulta.ConsultaId }, consulta);
+}
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutConsulta(int id, Consulta consulta)
@@ -56,5 +78,21 @@ namespace HealthifyAPI.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+        [HttpPatch("{id}/status")]
+public async Task<IActionResult> AtualizarStatus(int id, [FromBody] string novoStatus)
+{
+    var consulta = await _context.Consultas.FindAsync(id);
+    if (consulta == null)
+    {
+        return NotFound();
+    }
+
+    consulta.Status = novoStatus;
+    _context.Entry(consulta).State = EntityState.Modified;
+    await _context.SaveChangesAsync();
+    
+    return NoContent();
+}
+
     }
 }
