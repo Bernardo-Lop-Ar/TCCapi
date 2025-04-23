@@ -11,7 +11,7 @@ namespace HealthifyAPI.Models
         public int UsuarioId { get; set; }
 
         [ForeignKey("UsuarioId")]
-        public Usuario Usuario { get; set; } = null!;
+        public Usuario? Usuario { get; set; } = null!;
 
         public string? Especialidade { get; set; }
 
