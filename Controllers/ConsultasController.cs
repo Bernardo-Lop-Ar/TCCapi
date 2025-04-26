@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HealthifyAPI.Data;
 using HealthifyAPI.Models;
-using HealthifyAPI.Models.DTOS;
+using HealthifyAPI.Models.DTOs;
 
 namespace HealthifyAPI.Controllers
 {

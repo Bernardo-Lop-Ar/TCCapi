@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HealthifyAPI.Models;
 using HealthifyAPI.Data;
+using HealthifyAPI.Models.DTOs;
 
 namespace HealthifyAPI.Controllers
 {
@@ -17,10 +18,34 @@ namespace HealthifyAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
+public async Task<ActionResult<IEnumerable<ClienteResumoDTO>>> GetClientes()
+{
+    var clientes = await _context.Clientes
+        .Include(c => c.Usuario)
+        .Select(c => new ClienteResumoDTO
         {
-            return await _context.Clientes.Include(c => c.Usuario).ToListAsync();
-        }
+            ClienteId = c.ClienteId,
+            Peso = c.Peso,
+            Altura = c.Altura,
+            Objetivo = c.Objetivo,
+            NivelAtividade = c.NivelAtividade,
+            PreferenciasAlimentares = c.PreferenciasAlimentares,
+            DoencasPreexistentes = c.DoencasPreexistentes,
+            UsuarioId = c.UsuarioId,
+            Nome = c.Usuario.Nome,
+            Email = c.Usuario.Email,
+            TipoUsuario = c.Usuario.TipoUsuario,
+            cpf = c.Usuario.cpf,
+            telefone = c.Usuario.telefone,
+            DataNascimento = c.Usuario.DataNascimento,
+            Sexo = c.Usuario.Sexo,
+            Endereco = c.Usuario.Endereco
+        })
+        .ToListAsync();
+
+    return clientes;
+}
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Cliente>> GetCliente(int id)

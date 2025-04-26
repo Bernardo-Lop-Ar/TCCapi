@@ -24,7 +24,7 @@ namespace HealthifyAPI.Models
         [Required]
         public string? TipoConsulta { get; set; }
 
-        public string Status { get; set; } = "Agendada";
+        public string? Status { get; set; } = "Agendada";
 
         public string? Observacoes { get; set; }
     }

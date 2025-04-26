@@ -113,8 +113,8 @@ public class UsuariosController : ControllerBase
     // Model para o login
     public class LoginRequest
     {
-        public string Email { get; set; }
-        public string Senha { get; set; }
+        public string? Email { get; set; }
+        public string? Senha { get; set; }
     }
 
     // Método para login
