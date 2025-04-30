@@ -69,35 +69,30 @@ namespace HealthifyAPI.Controllers
         }
 
         [HttpPost]
-public async Task<ActionResult<ConsultaDTO>> PostConsulta(ConsultaDTO dto)
-{
-    // Validando se o ClienteId e NutricionistaId são válidos
-    var cliente = await _context.Clientes.FindAsync(dto.ClienteId);
-    var nutricionista = await _context.Nutricionistas.FindAsync(dto.NutricionistaId);
+        public async Task<ActionResult<ConsultaDTO>> PostConsulta(ConsultaDTO dto)
+        {
+            var cliente = await _context.Clientes.FindAsync(dto.ClienteId);
+            var nutricionista = await _context.Nutricionistas.FindAsync(dto.NutricionistaId);
 
-    if (cliente == null || nutricionista == null)
-        return BadRequest("Cliente ou Nutricionista inválido.");
+            if (cliente == null || nutricionista == null)
+                return BadRequest("Cliente ou Nutricionista inválido.");
 
-    // Criando a consulta
-    var consulta = new Consulta
-    {
-        ClienteId = dto.ClienteId,
-        NutricionistaId = dto.NutricionistaId,
-        DataConsulta = dto.DataConsulta,
-        TipoConsulta = dto.TipoConsulta,
-        Status = dto.Status,
-        Observacoes = dto.Observacoes
-    };
+            // Removido: Não converte mais para UTC
+            var consulta = new Consulta
+            {
+                ClienteId = dto.ClienteId,
+                NutricionistaId = dto.NutricionistaId,
+                DataConsulta = dto.DataConsulta, // Sem conversão para UTC
+                TipoConsulta = dto.TipoConsulta,
+                Status = dto.Status,
+                Observacoes = dto.Observacoes
+            };
 
-    // Adicionando a consulta no banco
-    _context.Consultas.Add(consulta);
-    await _context.SaveChangesAsync();
+            _context.Consultas.Add(consulta);
+            await _context.SaveChangesAsync();
 
-    // Retornando a consulta criada com sucesso
-    return CreatedAtAction(nameof(GetConsulta), new { id = consulta.ConsultaId }, MapToDTO(consulta));
-}
-
-
+            return CreatedAtAction(nameof(GetConsulta), new { id = consulta.ConsultaId }, MapToDTO(consulta));
+        }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutConsulta(int id, ConsultaDTO dto)
@@ -107,7 +102,8 @@ public async Task<ActionResult<ConsultaDTO>> PostConsulta(ConsultaDTO dto)
             var consulta = await _context.Consultas.FindAsync(id);
             if (consulta == null) return NotFound();
 
-            consulta.DataConsulta = dto.DataConsulta;
+            // Removido: Não converte mais para UTC
+            consulta.DataConsulta = dto.DataConsulta; // Sem conversão para UTC
             consulta.TipoConsulta = dto.TipoConsulta;
             consulta.Status = dto.Status;
             consulta.Observacoes = dto.Observacoes;
@@ -141,6 +137,47 @@ public async Task<ActionResult<ConsultaDTO>> PostConsulta(ConsultaDTO dto)
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // NOVO: Rota para dias com pelo menos uma consulta (dias indisponíveis)
+        [HttpGet("dias-indisponiveis/{nutricionistaId}")]
+        public async Task<ActionResult<IEnumerable<string>>> GetDiasIndisponiveis(int nutricionistaId)
+        {
+            var datas = await _context.Consultas
+                .Where(c => c.NutricionistaId == nutricionistaId)
+                .Select(c => c.DataConsulta.Date)
+                .Distinct()
+                .ToListAsync();
+
+            var datasFormatadas = datas.Select(d => d.ToString("yyyy-MM-dd")).ToList();
+            return datasFormatadas;
+        }
+
+        // NOVO: Rota para horários ocupados em uma data específica
+        [HttpGet("horarios-ocupados/{nutricionistaId}")]
+        public async Task<ActionResult<IEnumerable<string>>> GetHorariosOcupados(int nutricionistaId, [FromQuery] string data)
+        {
+            // Log de depuração da data recebida
+            Console.WriteLine($"Data recebida: {data}");
+            if (!DateTime.TryParse(data, out DateTime dataConsulta))
+            {
+                return BadRequest("Data inválida.");
+            }
+
+            // Log de depuração da data convertida
+            Console.WriteLine($"Data convertida: {dataConsulta}");
+
+            var horarios = await _context.Consultas
+                .Where(c => c.NutricionistaId == nutricionistaId && c.DataConsulta.Date == dataConsulta.Date)
+                .Select(c => c.DataConsulta.ToString("HH:mm"))
+                .ToListAsync();
+
+            if (horarios.Count == 0)
+            {
+                Console.WriteLine("Nenhum horário encontrado.");
+            }
+
+            return horarios;
         }
     }
 }
