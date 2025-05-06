@@ -13,6 +13,7 @@ namespace HealthifyAPI.Models.DTOs
 
         public int NutricionistaId { get; set; }
         public NutricionistaDTO? Nutricionista { get; set; } // Adicionado
+        public string HoraConsulta { get; set; } = "";
 
         public DateTime DataConsulta { get; set; }
         public string? TipoConsulta { get; set; }

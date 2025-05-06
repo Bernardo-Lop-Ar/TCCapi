@@ -24,6 +24,7 @@ namespace HealthifyAPI.Controllers
             NutricionistaId = consulta.NutricionistaId,
             DataConsulta = consulta.DataConsulta,
             TipoConsulta = consulta.TipoConsulta,
+            HoraConsulta = consulta.HoraConsulta,
             Status = consulta.Status,
             Observacoes = consulta.Observacoes,
             Cliente = new ClienteDTO
@@ -77,12 +78,12 @@ namespace HealthifyAPI.Controllers
             if (cliente == null || nutricionista == null)
                 return BadRequest("Cliente ou Nutricionista inválido.");
 
-            // Removido: Não converte mais para UTC
             var consulta = new Consulta
             {
                 ClienteId = dto.ClienteId,
                 NutricionistaId = dto.NutricionistaId,
-                DataConsulta = dto.DataConsulta, // Sem conversão para UTC
+                DataConsulta = dto.DataConsulta.Date,
+                HoraConsulta = dto.HoraConsulta,
                 TipoConsulta = dto.TipoConsulta,
                 Status = dto.Status,
                 Observacoes = dto.Observacoes
@@ -102,8 +103,7 @@ namespace HealthifyAPI.Controllers
             var consulta = await _context.Consultas.FindAsync(id);
             if (consulta == null) return NotFound();
 
-            // Removido: Não converte mais para UTC
-            consulta.DataConsulta = dto.DataConsulta; // Sem conversão para UTC
+            consulta.DataConsulta = dto.DataConsulta;
             consulta.TipoConsulta = dto.TipoConsulta;
             consulta.Status = dto.Status;
             consulta.Observacoes = dto.Observacoes;
@@ -139,7 +139,6 @@ namespace HealthifyAPI.Controllers
             return NoContent();
         }
 
-        // NOVO: Rota para dias com pelo menos uma consulta (dias indisponíveis)
         [HttpGet("dias-indisponiveis/{nutricionistaId}")]
         public async Task<ActionResult<IEnumerable<string>>> GetDiasIndisponiveis(int nutricionistaId)
         {
@@ -153,29 +152,25 @@ namespace HealthifyAPI.Controllers
             return datasFormatadas;
         }
 
-        // NOVO: Rota para horários ocupados em uma data específica
-        [HttpGet("horarios-ocupados/{nutricionistaId}")]
-        public async Task<ActionResult<IEnumerable<string>>> GetHorariosOcupados(int nutricionistaId, [FromQuery] string data)
+        // ✅ NOVO: horários ocupados com nutricionistaId e nome
+        [HttpGet("horarios-ocupados")]
+        public async Task<ActionResult<IEnumerable<HorarioConsultaDTO>>> GetHorariosOcupados([FromQuery] string data)
         {
-            // Log de depuração da data recebida
-            Console.WriteLine($"Data recebida: {data}");
             if (!DateTime.TryParse(data, out DateTime dataConsulta))
             {
                 return BadRequest("Data inválida.");
             }
 
-            // Log de depuração da data convertida
-            Console.WriteLine($"Data convertida: {dataConsulta}");
-
             var horarios = await _context.Consultas
-                .Where(c => c.NutricionistaId == nutricionistaId && c.DataConsulta.Date == dataConsulta.Date)
-                .Select(c => c.DataConsulta.ToString("HH:mm"))
+                .Include(c => c.Nutricionista).ThenInclude(n => n.Usuario)
+                .Where(c => c.DataConsulta.Date == dataConsulta.Date)
+                .Select(c => new HorarioConsultaDTO
+                {
+                    Hora = c.HoraConsulta,
+                    NutricionistaId = c.NutricionistaId,
+                    NutricionistaNome = c.Nutricionista.Usuario.Nome
+                })
                 .ToListAsync();
-
-            if (horarios.Count == 0)
-            {
-                Console.WriteLine("Nenhum horário encontrado.");
-            }
 
             return horarios;
         }

@@ -20,6 +20,7 @@ namespace HealthifyAPI.Models
 
         [Required]
         public DateTime DataConsulta { get; set; }
+        public string HoraConsulta { get; set; } = "";
 
         [Required]
         public string? TipoConsulta { get; set; }
