@@ -103,7 +103,7 @@ namespace HealthifyAPI.Controllers
             var consulta = await _context.Consultas.FindAsync(id);
             if (consulta == null) return NotFound();
 
-            consulta.DataConsulta = dto.DataConsulta;
+            consulta.DataConsulta = dto.DataConsulta.Date.AddHours(12);
             consulta.TipoConsulta = dto.TipoConsulta;
             consulta.Status = dto.Status;
             consulta.Observacoes = dto.Observacoes;
@@ -152,7 +152,6 @@ namespace HealthifyAPI.Controllers
             return datasFormatadas;
         }
 
-        // ✅ NOVO: horários ocupados com nutricionistaId e nome
         [HttpGet("horarios-ocupados")]
         public async Task<ActionResult<IEnumerable<HorarioConsultaDTO>>> GetHorariosOcupados([FromQuery] string data)
         {
