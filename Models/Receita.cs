@@ -3,22 +3,27 @@ using System.ComponentModel.DataAnnotations;
 namespace HealthifyAPI.Models
 {
     public class Receita
-    {
-        [Key]
-        public int ReceitaId { get; set; }
+{
+    public int ReceitaId { get; set; }
 
-        public string? Nome { get; set; }
+    [Required(ErrorMessage = "O campo Nome é obrigatório.")]
+    public string Nome { get; set; }
 
-        public string? Ingredientes { get; set; }
+    [Required(ErrorMessage = "O campo Ingredientes é obrigatório.")]
+    public string Ingredientes { get; set; }
 
-        public string? Instrucoes { get; set; }
+    [Required(ErrorMessage = "O campo Instruções é obrigatório.")]
+    public string Instrucoes { get; set; }
 
-        public decimal? CaloriasPorPorcao { get; set; }
+    [Required(ErrorMessage = "O campo Calorias por Porção é obrigatório.")]
+    public double? CaloriasPorPorcao { get; set; }
 
-        public string? Categoria { get; set; }
+    public string Categoria { get; set; }
 
-        public string? Tipo { get; set; }
+    public string Tipo { get; set; }
 
-        public string? FotoReceita { get; set; }
-    }
+    public string FotoReceita { get; set; } // Se for opcional, pode ser null
+}
+
+
 }
