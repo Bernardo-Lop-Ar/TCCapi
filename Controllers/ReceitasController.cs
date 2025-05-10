@@ -41,11 +41,26 @@ namespace HealthifyAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutReceita(int id, Receita receita)
         {
-            if (id != receita.ReceitaId) return BadRequest();
-            _context.Entry(receita).State = EntityState.Modified;
+            if (id != receita.ReceitaId)
+                return BadRequest();
+
+            var receitaExistente = await _context.Receitas.FindAsync(id);
+            if (receitaExistente == null)
+                return NotFound();
+
+            // Atualiza os campos manualmente
+            receitaExistente.Nome = receita.Nome;
+            receitaExistente.Ingredientes = receita.Ingredientes;
+            receitaExistente.Instrucoes = receita.Instrucoes;
+            receitaExistente.CaloriasPorPorcao = receita.CaloriasPorPorcao;
+            receitaExistente.Categoria = receita.Categoria;
+            receitaExistente.Tipo = receita.Tipo;
+
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteReceita(int id)
