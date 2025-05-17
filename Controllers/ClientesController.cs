@@ -18,34 +18,33 @@ namespace HealthifyAPI.Controllers
         }
 
         [HttpGet]
-public async Task<ActionResult<IEnumerable<ClienteResumoDTO>>> GetClientes()
-{
-    var clientes = await _context.Clientes
-        .Include(c => c.Usuario)
-        .Select(c => new ClienteResumoDTO
+        public async Task<ActionResult<IEnumerable<ClienteResumoDTO>>> GetClientes()
         {
-            ClienteId = c.ClienteId,
-            Peso = c.Peso,
-            Altura = c.Altura,
-            Objetivo = c.Objetivo,
-            NivelAtividade = c.NivelAtividade,
-            PreferenciasAlimentares = c.PreferenciasAlimentares,
-            DoencasPreexistentes = c.DoencasPreexistentes,
-            UsuarioId = c.UsuarioId,
-            Nome = c.Usuario.Nome,
-            Email = c.Usuario.Email,
-            TipoUsuario = c.Usuario.TipoUsuario,
-            cpf = c.Usuario.cpf,
-            telefone = c.Usuario.telefone,
-            DataNascimento = c.Usuario.DataNascimento,
-            Sexo = c.Usuario.Sexo,
-            Endereco = c.Usuario.Endereco
-        })
-        .ToListAsync();
+            var clientes = await _context.Clientes
+                .Include(c => c.Usuario)
+                .Select(c => new ClienteResumoDTO
+                {
+                    ClienteId = c.ClienteId,
+                    Peso = c.Peso,
+                    Altura = c.Altura,
+                    Objetivo = c.Objetivo,
+                    NivelAtividade = c.NivelAtividade,
+                    PreferenciasAlimentares = c.PreferenciasAlimentares,
+                    DoencasPreexistentes = c.DoencasPreexistentes,
+                    UsuarioId = c.UsuarioId,
+                    Nome = c.Usuario.Nome,
+                    Email = c.Usuario.Email,
+                    TipoUsuario = c.Usuario.TipoUsuario,
+                    cpf = c.Usuario.cpf,
+                    telefone = c.Usuario.telefone,
+                    DataNascimento = c.Usuario.DataNascimento,
+                    Sexo = c.Usuario.Sexo,
+                    Endereco = c.Usuario.Endereco
+                })
+                .ToListAsync();
 
-    return clientes;
-}
-
+            return clientes;
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Cliente>> GetCliente(int id)
@@ -58,6 +57,16 @@ public async Task<ActionResult<IEnumerable<ClienteResumoDTO>>> GetClientes()
         [HttpPost]
         public async Task<ActionResult<Cliente>> PostCliente(Cliente cliente)
         {
+            ModelState.Remove("Usuario");
+
+            foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Usuario")).ToList())
+            {
+                ModelState.Remove(key);
+            }
+            
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             _context.Clientes.Add(cliente);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetCliente), new { id = cliente.ClienteId }, cliente);
@@ -66,6 +75,11 @@ public async Task<ActionResult<IEnumerable<ClienteResumoDTO>>> GetClientes()
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCliente(int id, Cliente cliente)
         {
+            ModelState.Remove("Usuario");  // Remove a validação da propriedade de navegação
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             if (id != cliente.ClienteId) return BadRequest();
             _context.Entry(cliente).State = EntityState.Modified;
             await _context.SaveChangesAsync();

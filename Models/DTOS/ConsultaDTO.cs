@@ -21,7 +21,7 @@ namespace HealthifyAPI.Models.DTOs
         public string HoraConsulta { get; set; } = "";
 
         [Required]
-        public DateTime DataConsulta { get; set; } - "";
+        public DateTime DataConsulta { get; set; } 
 
         public string? TipoConsulta { get; set; }
 

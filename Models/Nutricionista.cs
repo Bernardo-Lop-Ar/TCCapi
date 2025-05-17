@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace HealthifyAPI.Models
 {
@@ -9,8 +10,10 @@ namespace HealthifyAPI.Models
         public int NutricionistaId { get; set; }
 
         public int UsuarioId { get; set; }
-
+        
+        [JsonIgnore]
         [ForeignKey("UsuarioId")]
+
         public Usuario? Usuario { get; set; } = null!;
 
         public string? Especialidade { get; set; }

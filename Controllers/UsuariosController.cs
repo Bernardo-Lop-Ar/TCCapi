@@ -2,8 +2,8 @@ using HealthifyAPI.Data;
 using HealthifyAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 [Route("api/[controller]")]
@@ -37,6 +37,16 @@ public class UsuariosController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Usuario>> PostUsuario([FromBody] Usuario usuario)
     {
+        // Remove propriedades de navegação para evitar validações desnecessárias
+        ModelState.Remove("Cliente");
+        ModelState.Remove("Nutricionista");
+        ModelState.Remove("Usuario");
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         try
         {
             // Validação dos campos principais
@@ -47,7 +57,7 @@ public class UsuariosController : ControllerBase
                 string.IsNullOrWhiteSpace(usuario.TipoUsuario) ||
                 string.IsNullOrWhiteSpace(usuario.cpf) ||
                 string.IsNullOrWhiteSpace(usuario.telefone) ||
-                usuario.DataNascimento == DateTime.MinValue || // Verificando DataNascimento
+                usuario.DataNascimento == DateTime.MinValue ||
                 string.IsNullOrWhiteSpace(usuario.Sexo) ||
                 string.IsNullOrWhiteSpace(usuario.Endereco))
             {
@@ -58,13 +68,13 @@ public class UsuariosController : ControllerBase
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            // Associar dados adicionais dependendo do tipo de usuário
+            // Criar Cliente ou Nutricionista após salvar usuário
             if (usuario.TipoUsuario == "Cliente")
             {
                 var cliente = new Cliente
                 {
-                    UsuarioId = usuario.UsuarioId,  // Associando o UsuarioId corretamente
-                    Peso = null,  // Inicializando como null ou configurado para ser recebido via API
+                    UsuarioId = usuario.UsuarioId,
+                    Peso = null,
                     Altura = null,
                     Objetivo = null,
                     NivelAtividade = null,
@@ -72,40 +82,34 @@ public class UsuariosController : ControllerBase
                     DoencasPreexistentes = null
                 };
                 _context.Clientes.Add(cliente);
+                await _context.SaveChangesAsync();
             }
             else if (usuario.TipoUsuario == "Nutricionista")
             {
                 var nutricionista = new Nutricionista
                 {
-                    UsuarioId = usuario.UsuarioId,  // Associando o UsuarioId corretamente
-                    Especialidade = null,  // Inicializando como null ou configurado para ser recebido via API
+                    UsuarioId = usuario.UsuarioId,
+                    Especialidade = null,
                     Descricao = null
                 };
                 _context.Nutricionistas.Add(nutricionista);
+                await _context.SaveChangesAsync();
             }
             else
             {
-                // Caso o TipoUsuario seja inválido, retorna erro
                 return BadRequest("Tipo de usuário inválido. Use 'Cliente' ou 'Nutricionista'.");
             }
-
-            // Salva novamente após associar os dados adicionais
-            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetUsuario), new { id = usuario.UsuarioId }, usuario);
         }
         catch (Exception ex)
         {
-            // Logando os detalhes da exceção
             Console.WriteLine($"Erro interno: {ex.Message}");
-            
-            // Se houver uma exceção interna, registre-a também
             if (ex.InnerException != null)
             {
                 Console.WriteLine($"Detalhes do erro interno: {ex.InnerException.Message}");
                 Console.WriteLine($"Stack trace do erro interno: {ex.InnerException.StackTrace}");
             }
-
             return StatusCode(500, $"Erro interno: {ex.Message}");
         }
     }
