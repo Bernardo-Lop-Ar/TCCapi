@@ -31,12 +31,12 @@ namespace HealthifyAPI.Models
 
         // Campos adicionais
         [Required]
-        public DateTime DataNascimento { get; set; } // Data de Nascimento
+        public DateTime DataNascimento { get; set; } 
 
         [Required]
-        public string? Sexo { get; set; } // Sexo
+        public string? Sexo { get; set; } 
 
         [Required]
-        public string? Endereco { get; set; } // Endereço
+        public string? Endereco { get; set; } 
     }
 }

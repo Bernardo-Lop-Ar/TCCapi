@@ -22,7 +22,7 @@ namespace HealthifyAPI.Models
 
     public string? Tipo { get; set; }
 
-    public string? FotoReceita { get; set; } // Se for opcional, pode ser null
+    public string? FotoReceita { get; set; } 
 }
 
 

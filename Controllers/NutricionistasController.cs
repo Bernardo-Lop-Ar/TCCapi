@@ -33,7 +33,7 @@ namespace HealthifyAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Nutricionista>> PostNutricionista(Nutricionista nutricionista)
         {
-            // Remove todos os erros de validação relacionados a "Usuario" e seus filhos do ModelState
+   
             foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Usuario")).ToList())
             {
                 ModelState.Remove(key);
@@ -53,7 +53,7 @@ namespace HealthifyAPI.Controllers
         {
             if (id != nutricionista.NutricionistaId) return BadRequest();
 
-            // Também pode remover aqui, caso necessário:
+
             foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Usuario")).ToList())
             {
                 ModelState.Remove(key);

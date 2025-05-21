@@ -5,17 +5,17 @@ namespace HealthifyAPI.Models.DTOs
 {
     public class ConsultaDTO
     {
-        public int ConsultaId { get; set; } // ID da consulta
+        public int ConsultaId { get; set; }
 
         [Required]
         public int ClienteId { get; set; }
 
-        public ClienteDTO? Cliente { get; set; } // Dados do cliente (opcional)
+        public ClienteDTO? Cliente { get; set; } 
 
         [Required]
         public int NutricionistaId { get; set; }
 
-        public NutricionistaDTO? Nutricionista { get; set; } // Dados do nutricionista (opcional)
+        public NutricionistaDTO? Nutricionista { get; set; } 
 
         [Required]
         public string HoraConsulta { get; set; } = "";

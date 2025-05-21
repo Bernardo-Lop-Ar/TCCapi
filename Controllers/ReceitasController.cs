@@ -48,7 +48,6 @@ namespace HealthifyAPI.Controllers
             if (receitaExistente == null)
                 return NotFound();
 
-            // Atualiza os campos manualmente
             receitaExistente.Nome = receita.Nome;
             receitaExistente.Ingredientes = receita.Ingredientes;
             receitaExistente.Instrucoes = receita.Instrucoes;

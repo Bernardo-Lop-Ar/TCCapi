@@ -2,7 +2,7 @@ namespace HealthifyAPI.Models.DTOs
 {
     public class ClienteResumoDTO
     {
-        // Dados do Cliente
+   
         public int ClienteId { get; set; }
         public decimal? Peso { get; set; }
         public decimal? Altura { get; set; }
@@ -11,7 +11,7 @@ namespace HealthifyAPI.Models.DTOs
         public string? PreferenciasAlimentares { get; set; }
         public string? DoencasPreexistentes { get; set; }
 
-        // Dados do Usuario (sem a senha)
+    
         public int UsuarioId { get; set; }
         public string? Nome { get; set; }
         public string? Email { get; set; }

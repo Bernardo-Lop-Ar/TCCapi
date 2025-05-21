@@ -75,7 +75,7 @@ namespace HealthifyAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCliente(int id, Cliente cliente)
         {
-            ModelState.Remove("Usuario");  // Remove a validação da propriedade de navegação
+            ModelState.Remove("Usuario");  
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
