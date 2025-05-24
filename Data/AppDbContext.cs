@@ -19,9 +19,18 @@ namespace HealthifyAPI.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<PlanoReceita>()
-               .HasKey(pr => new { pr.PlanoId, pr.ReceitaId });
+                .HasKey(pr => new { pr.PlanoId, pr.ReceitaId, pr.DiaSemana, pr.Refeicao });
 
-            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<PlanoReceita>()
+                .HasOne(pr => pr.PlanoAlimentar)
+                .WithMany(pa => pa.PlanoReceita)
+                .HasForeignKey(pr => pr.PlanoId);
+
+            modelBuilder.Entity<PlanoReceita>()
+                .HasOne(pr => pr.Receita)
+                .WithMany()
+                .HasForeignKey(pr => pr.ReceitaId);
+
         }
     }
 }
