@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
+
 namespace HealthifyAPI.Models
 {
     public class PlanoAlimentar
     {
+        public ICollection<PlanoReceita> PlanoReceita { get; set; } = new List<PlanoReceita>();
+
         [Key]
         public int PlanoId { get; set; }
 
