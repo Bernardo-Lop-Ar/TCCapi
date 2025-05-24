@@ -17,7 +17,6 @@ public class UsuariosController : ControllerBase
         _context = context;
     }
 
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios()
     {
@@ -35,7 +34,6 @@ public class UsuariosController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Usuario>> PostUsuario([FromBody] Usuario usuario)
     {
-  
         ModelState.Remove("Cliente");
         ModelState.Remove("Nutricionista");
         ModelState.Remove("Usuario");
@@ -47,7 +45,6 @@ public class UsuariosController : ControllerBase
 
         try
         {
-
             if (usuario == null ||
                 string.IsNullOrWhiteSpace(usuario.Nome) ||
                 string.IsNullOrWhiteSpace(usuario.Email) ||
@@ -62,11 +59,9 @@ public class UsuariosController : ControllerBase
                 return BadRequest("Dados inválidos. Certifique-se de que 'nome', 'email', 'senha', 'CPF', 'telefone', 'dataNascimento', 'sexo' e 'endereco' estão preenchidos.");
             }
 
-
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-   
             if (usuario.TipoUsuario == "Cliente")
             {
                 var cliente = new Cliente
@@ -118,7 +113,6 @@ public class UsuariosController : ControllerBase
         public string? Senha { get; set; }
     }
 
-
     [HttpPost("login")]
     public async Task<ActionResult<Usuario>> Login([FromBody] LoginRequest loginRequest)
     {
@@ -133,7 +127,6 @@ public class UsuariosController : ControllerBase
         return Ok(usuario);
     }
 
-
     [HttpPut("{id}")]
     public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
     {
@@ -145,7 +138,6 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
-
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUsuario(int id)
     {
@@ -156,5 +148,28 @@ public class UsuariosController : ControllerBase
         _context.Usuarios.Remove(usuario);
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    // Rota nova: GET /api/usuarios/logado
+    [HttpGet("logado")]
+    public async Task<ActionResult<Usuario>> GetUsuarioLogado()
+    {
+        try
+        {
+            // Aqui você deve implementar a lógica de autenticação real,
+            // pegar o usuário logado pela sessão, token, etc.
+            // Exemplo fixo (para teste), retorna usuário com ID 1:
+            int usuarioLogadoId = 1;
+
+            var usuario = await _context.Usuarios.FindAsync(usuarioLogadoId);
+
+            if (usuario == null) return NotFound("Usuário logado não encontrado.");
+
+            return Ok(usuario);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao buscar usuário logado: {ex.Message}");
+        }
     }
 }
