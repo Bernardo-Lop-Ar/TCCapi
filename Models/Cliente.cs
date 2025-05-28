@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
-
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 namespace HealthifyAPI.Models
 {
     public class Cliente
@@ -13,8 +13,8 @@ namespace HealthifyAPI.Models
         
         [JsonIgnore]
         [ForeignKey("UsuarioId")]
-
-        public Usuario Usuario { get; set; } = null!;
+        [ValidateNever]
+        public Usuario? Usuario { get; set; } 
 
         public decimal? Peso { get; set; }
 

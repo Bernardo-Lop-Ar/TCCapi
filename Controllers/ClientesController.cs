@@ -57,32 +57,56 @@ namespace HealthifyAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Cliente>> PostCliente(Cliente cliente)
         {
-            ModelState.Remove("Usuario");
-
-            foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Usuario")).ToList())
-            {
-                ModelState.Remove(key);
-            }
-            
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            _context.Clientes.Add(cliente);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetCliente), new { id = cliente.ClienteId }, cliente);
+            try
+            {
+                _context.Clientes.Add(cliente);
+                await _context.SaveChangesAsync();
+                return CreatedAtAction(nameof(GetCliente), new { id = cliente.ClienteId }, cliente);
+            }
+            catch (DbUpdateException dbEx)
+            {
+                var innerMessage = dbEx.InnerException != null ? dbEx.InnerException.Message : dbEx.Message;
+                Console.WriteLine($"Erro ao salvar Cliente: {innerMessage}");
+                return StatusCode(500, $"Erro ao salvar Cliente: {innerMessage}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro inesperado: {ex.Message}");
+                return StatusCode(500, $"Erro inesperado: {ex.Message}");
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCliente(int id, Cliente cliente)
         {
-            ModelState.Remove("Usuario");  
+            ModelState.Remove("Usuario");
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             if (id != cliente.ClienteId) return BadRequest();
+
             _context.Entry(cliente).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ClienteExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            
             return NoContent();
         }
 
@@ -94,6 +118,11 @@ namespace HealthifyAPI.Controllers
             _context.Clientes.Remove(cliente);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        private bool ClienteExists(int id)
+        {
+            return _context.Clientes.Any(e => e.ClienteId == id);
         }
     }
 }
