@@ -38,5 +38,10 @@ namespace HealthifyAPI.Models
 
         [Required]
         public string? Endereco { get; set; } 
+
+        public Cliente? Cliente { get; set; }
+        public Nutricionista? Nutricionista { get; set; }
+
+        
     }
 }

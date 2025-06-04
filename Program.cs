@@ -1,5 +1,8 @@
 using HealthifyAPI.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +22,24 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configurar autenticação JWT
+var key = builder.Configuration["Jwt:Key"] ?? "sua_chave_secreta_aqui_muito_forte_e_segura";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -32,9 +53,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ATIVAR CORS antes do MapControllers
+// Usar CORS
 app.UseCors("AllowAll");
 
+// Ativar autenticação e autorização
+app.UseAuthentication(); // <-- IMPORTANTE: vem antes do UseAuthorization
 app.UseAuthorization();
 
 app.MapControllers();

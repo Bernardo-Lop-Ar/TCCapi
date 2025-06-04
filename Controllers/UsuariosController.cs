@@ -1,9 +1,11 @@
 using HealthifyAPI.Data;
 using HealthifyAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 [Route("api/[controller]")]
@@ -107,26 +109,6 @@ public class UsuariosController : ControllerBase
         }
     }
 
-    public class LoginRequest
-    {
-        public string? Email { get; set; }
-        public string? Senha { get; set; }
-    }
-
-    [HttpPost("login")]
-    public async Task<ActionResult<Usuario>> Login([FromBody] LoginRequest loginRequest)
-    {
-        var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Email == loginRequest.Email && u.senha == loginRequest.Senha);
-
-        if (usuario == null)
-        {
-            return Unauthorized("Email ou senha inválidos.");
-        }
-
-        return Ok(usuario);
-    }
-
     [HttpPut("{id}")]
     public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
     {
@@ -150,18 +132,21 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
-    // Rota nova: GET /api/usuarios/logado
+    // Rota protegida para obter o usuário logado via token JWT
+    [Authorize]
     [HttpGet("logado")]
     public async Task<ActionResult<Usuario>> GetUsuarioLogado()
     {
         try
         {
-            // Aqui você deve implementar a lógica de autenticação real,
-            // pegar o usuário logado pela sessão, token, etc.
-            // Exemplo fixo (para teste), retorna usuário com ID 1:
-            int usuarioLogadoId = 1;
+            var usuarioIdClaim = User.FindFirst("UsuarioId");
+            if (usuarioIdClaim == null)
+                return Unauthorized("Usuário não autenticado.");
 
-            var usuario = await _context.Usuarios.FindAsync(usuarioLogadoId);
+            if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
+                return Unauthorized("Usuário inválido.");
+
+            var usuario = await _context.Usuarios.FindAsync(usuarioId);
 
             if (usuario == null) return NotFound("Usuário logado não encontrado.");
 
@@ -172,4 +157,91 @@ public class UsuariosController : ControllerBase
             return StatusCode(500, $"Erro ao buscar usuário logado: {ex.Message}");
         }
     }
+
+    // ROTA DE LOGIN
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] UsuarioLoginRequest login)
+    {
+        if (string.IsNullOrEmpty(login.Email) || string.IsNullOrEmpty(login.Senha))
+        {
+            return BadRequest("Email e senha são obrigatórios.");
+        }
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u =>
+            u.Email == login.Email && u.senha == login.Senha);
+
+        if (usuario == null)
+        {
+            return Unauthorized("Email ou senha inválidos.");
+        }
+
+        return Ok(usuario);
+    }
+    [Authorize]
+[HttpGet("perfil")]
+public async Task<ActionResult<object>> GetPerfil()
+{
+    try
+    {
+        var usuarioIdClaim = User.FindFirst("UsuarioId");
+        if (usuarioIdClaim == null)
+            return Unauthorized("Usuário não autenticado.");
+
+        if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
+            return Unauthorized("Usuário inválido.");
+
+        // Buscar usuário no banco incluindo dados relacionados, por exemplo Cliente ou Nutricionista
+        var usuario = await _context.Usuarios
+            .Include(u => u.Cliente) // Caso exista relacionamento Cliente
+            .Include(u => u.Nutricionista) // Caso exista relacionamento Nutricionista
+            .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
+
+        if (usuario == null)
+            return NotFound("Usuário não encontrado.");
+
+        // Montar objeto perfil para retornar apenas os dados necessários
+        var perfil = new
+        {
+            usuario.UsuarioId,
+            usuario.Nome,
+            usuario.Email,
+            usuario.telefone,
+            usuario.TipoUsuario,
+            usuario.cpf,
+            usuario.DataNascimento,
+            usuario.Sexo,
+            usuario.Endereco,
+            Cliente = usuario.Cliente == null ? null : new
+            {
+                usuario.Cliente.Peso,
+                usuario.Cliente.Altura,
+                usuario.Cliente.Objetivo,
+                usuario.Cliente.NivelAtividade,
+                usuario.Cliente.PreferenciasAlimentares,
+                usuario.Cliente.DoencasPreexistentes
+            },
+            Nutricionista = usuario.Nutricionista == null ? null : new
+            {
+                usuario.Nutricionista.Especialidade,
+                usuario.Nutricionista.Descricao
+            }
+        };
+
+        return Ok(perfil);
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
+    }
 }
+
+}
+
+
+public class UsuarioLoginRequest
+{
+    public string Email { get; set; }
+    public string Senha { get; set; }
+}
+
+
