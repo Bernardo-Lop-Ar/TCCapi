@@ -177,10 +177,19 @@ public class UsuariosController : ControllerBase
 
         return Ok(usuario);
     }
+    [HttpGet("Clientes/usuario/{usuarioId}")]
+    public IActionResult GetClienteByUsuarioId(int usuarioId)
+    {
+    var cliente = _context.Clientes.FirstOrDefault(c => c.UsuarioId == usuarioId);
+    if (cliente == null)
+        return NotFound();
+
+    return Ok(cliente);
+    }
     [Authorize]
-[HttpGet("perfil")]
-public async Task<ActionResult<object>> GetPerfil()
-{
+    [HttpGet("perfil")]
+    public async Task<ActionResult<object>> GetPerfil()
+    {
     try
     {
         var usuarioIdClaim = User.FindFirst("UsuarioId");
