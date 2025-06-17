@@ -33,7 +33,7 @@ namespace HealthifyAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Nutricionista>> PostNutricionista(Nutricionista nutricionista)
         {
-   
+
             foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Usuario")).ToList())
             {
                 ModelState.Remove(key);
@@ -76,6 +76,19 @@ namespace HealthifyAPI.Controllers
             _context.Nutricionistas.Remove(nutricionista);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpGet("respostas/{clienteId}")]
+        public async Task<ActionResult<IEnumerable<QuestionarioResposta>>> GetRespostasPorCliente(int clienteId)
+        {
+            var respostas = await _context.QuestionarioRespostas
+                                          .Where(q => q.ClienteId == clienteId)
+                                          .ToListAsync();
+
+            if (respostas == null || respostas.Count == 0)
+                return NotFound($"Nenhuma resposta encontrada para o cliente com id {clienteId}");
+
+            return respostas;
         }
     }
 }

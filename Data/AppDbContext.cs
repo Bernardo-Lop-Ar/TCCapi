@@ -32,5 +32,7 @@ namespace HealthifyAPI.Data
                 .HasForeignKey(pr => pr.ReceitaId);
 
         }
+        public DbSet<QuestionarioResposta> QuestionarioRespostas { get; set; }
+
     }
 }

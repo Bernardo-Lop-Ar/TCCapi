@@ -106,7 +106,7 @@ namespace HealthifyAPI.Controllers
                     throw;
                 }
             }
-            
+
             return NoContent();
         }
 
@@ -123,6 +123,26 @@ namespace HealthifyAPI.Controllers
         private bool ClienteExists(int id)
         {
             return _context.Clientes.Any(e => e.ClienteId == id);
+        }
+        [HttpPost("respostas")]
+        public async Task<IActionResult> PostRespostas([FromBody] List<QuestionarioResposta> respostas)
+        {
+            if (respostas == null || respostas.Count == 0)
+                return BadRequest("Nenhuma resposta enviada.");
+
+            try
+            {
+
+                await _context.QuestionarioRespostas.AddRangeAsync(respostas);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Respostas salvas com sucesso." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao salvar respostas: {ex.Message}");
+                return StatusCode(500, $"Erro ao salvar respostas: {ex.Message}");
+            }
         }
     }
 }
