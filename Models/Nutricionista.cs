@@ -11,7 +11,6 @@ namespace HealthifyAPI.Models
 
         public int UsuarioId { get; set; }
         
-        [JsonIgnore]
         [ForeignKey("UsuarioId")]
 
         public Usuario? Usuario { get; set; } = null!;
