@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HealthifyAPI.Models;
 using HealthifyAPI.Data;
-
+using HealthifyAPI.Models.DTOs;
 namespace HealthifyAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -16,19 +16,35 @@ namespace HealthifyAPI.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Nutricionista>>> GetNutricionistas()
+        [HttpGet("{id}")]
+        public async Task<ActionResult<NutricionistaDTO>> GetNutricionista(int id)
         {
-            return await _context.Nutricionistas.Include(n => n.Usuario).ToListAsync();
+            var nutricionista = await _context.Nutricionistas
+                .Include(n => n.Usuario)
+                .FirstOrDefaultAsync(n => n.NutricionistaId == id);
+
+            if (nutricionista == null)
+                return NotFound();
+
+            var dto = new NutricionistaDTO
+            {
+                NutricionistaId = nutricionista.NutricionistaId,
+                UsuarioId = nutricionista.UsuarioId,
+                Nome = nutricionista.Usuario?.Nome,
+                Email = nutricionista.Usuario?.Email,
+                Telefone = nutricionista.Usuario?.telefone,
+                Sexo = nutricionista.Usuario?.Sexo,
+                Cpf = nutricionista.Usuario?.cpf,
+                Endereco = nutricionista.Usuario?.Endereco,
+                DataNascimento = nutricionista.Usuario?.DataNascimento,
+                Especialidade = nutricionista.Especialidade,
+                Descricao = nutricionista.Descricao,
+                FotoPerfil = nutricionista.FotoPerfil
+            };
+
+            return dto;
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Nutricionista>> GetNutricionista(int id)
-        {
-            var nutricionista = await _context.Nutricionistas.Include(n => n.Usuario).FirstOrDefaultAsync(n => n.NutricionistaId == id);
-            if (nutricionista == null) return NotFound();
-            return nutricionista;
-        }
 
         [HttpPost]
         public async Task<ActionResult<Nutricionista>> PostNutricionista(Nutricionista nutricionista)
