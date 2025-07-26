@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using HealthifyAPI.Models.DTOs;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -110,14 +111,50 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
+    public async Task<IActionResult> PutUsuario(int id, [FromBody] UsuarioUpdateDto usuarioDto)
     {
-        if (id != usuario.UsuarioId)
-            return BadRequest();
+        // 1. Verifica se o DTO enviado é válido (ex: email com formato correto)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-        _context.Entry(usuario).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
-        return NoContent();
+        // 2. Busca o usuário original no banco de dados
+        var usuarioNoBanco = await _context.Usuarios.FindAsync(id);
+
+        if (usuarioNoBanco == null)
+        {
+            return NotFound("Usuário não encontrado.");
+        }
+
+        // 3. Atualiza APENAS os campos recebidos do DTO.
+        // Isso evita que a senha e outros dados sejam apagados!
+        usuarioNoBanco.Nome = usuarioDto.Nome;
+        usuarioNoBanco.Email = usuarioDto.Email;
+        usuarioNoBanco.telefone = usuarioDto.Telefone;
+        usuarioNoBanco.Endereco = usuarioDto.Endereco;
+        usuarioNoBanco.Sexo = usuarioDto.Sexo;
+        usuarioNoBanco.DataNascimento = usuarioDto.DataNascimento ?? usuarioNoBanco.DataNascimento; // Mantém a data antiga se nenhuma nova for enviada
+
+        // 4. Salva as alterações
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Trata casos onde o usuário pode ter sido deletado enquanto era editado
+            if (!_context.Usuarios.Any(e => e.UsuarioId == id))
+            {
+                return NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return NoContent(); // Retorna 204 No Content, indicando sucesso.
     }
 
     [HttpDelete("{id}")]
@@ -180,69 +217,69 @@ public class UsuariosController : ControllerBase
     [HttpGet("Clientes/usuario/{usuarioId}")]
     public IActionResult GetClienteByUsuarioId(int usuarioId)
     {
-    var cliente = _context.Clientes.FirstOrDefault(c => c.UsuarioId == usuarioId);
-    if (cliente == null)
-        return NotFound();
+        var cliente = _context.Clientes.FirstOrDefault(c => c.UsuarioId == usuarioId);
+        if (cliente == null)
+            return NotFound();
 
-    return Ok(cliente);
+        return Ok(cliente);
     }
     [Authorize]
     [HttpGet("perfil")]
     public async Task<ActionResult<object>> GetPerfil()
     {
-    try
-    {
-        var usuarioIdClaim = User.FindFirst("UsuarioId");
-        if (usuarioIdClaim == null)
-            return Unauthorized("Usuário não autenticado.");
-
-        if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
-            return Unauthorized("Usuário inválido.");
-
-        // Buscar usuário no banco incluindo dados relacionados, por exemplo Cliente ou Nutricionista
-        var usuario = await _context.Usuarios
-            .Include(u => u.Cliente) // Caso exista relacionamento Cliente
-            .Include(u => u.Nutricionista) // Caso exista relacionamento Nutricionista
-            .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
-
-        if (usuario == null)
-            return NotFound("Usuário não encontrado.");
-
-        // Montar objeto perfil para retornar apenas os dados necessários
-        var perfil = new
+        try
         {
-            usuario.UsuarioId,
-            usuario.Nome,
-            usuario.Email,
-            usuario.telefone,
-            usuario.TipoUsuario,
-            usuario.cpf,
-            usuario.DataNascimento,
-            usuario.Sexo,
-            usuario.Endereco,
-            Cliente = usuario.Cliente == null ? null : new
-            {
-                usuario.Cliente.Peso,
-                usuario.Cliente.Altura,
-                usuario.Cliente.Objetivo,
-                usuario.Cliente.NivelAtividade,
-                usuario.Cliente.PreferenciasAlimentares,
-                usuario.Cliente.DoencasPreexistentes
-            },
-            Nutricionista = usuario.Nutricionista == null ? null : new
-            {
-                usuario.Nutricionista.Especialidade,
-                usuario.Nutricionista.Descricao
-            }
-        };
+            var usuarioIdClaim = User.FindFirst("UsuarioId");
+            if (usuarioIdClaim == null)
+                return Unauthorized("Usuário não autenticado.");
 
-        return Ok(perfil);
+            if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
+                return Unauthorized("Usuário inválido.");
+
+            // Buscar usuário no banco incluindo dados relacionados, por exemplo Cliente ou Nutricionista
+            var usuario = await _context.Usuarios
+                .Include(u => u.Cliente) // Caso exista relacionamento Cliente
+                .Include(u => u.Nutricionista) // Caso exista relacionamento Nutricionista
+                .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
+
+            if (usuario == null)
+                return NotFound("Usuário não encontrado.");
+
+            // Montar objeto perfil para retornar apenas os dados necessários
+            var perfil = new
+            {
+                usuario.UsuarioId,
+                usuario.Nome,
+                usuario.Email,
+                usuario.telefone,
+                usuario.TipoUsuario,
+                usuario.cpf,
+                usuario.DataNascimento,
+                usuario.Sexo,
+                usuario.Endereco,
+                Cliente = usuario.Cliente == null ? null : new
+                {
+                    usuario.Cliente.Peso,
+                    usuario.Cliente.Altura,
+                    usuario.Cliente.Objetivo,
+                    usuario.Cliente.NivelAtividade,
+                    usuario.Cliente.PreferenciasAlimentares,
+                    usuario.Cliente.DoencasPreexistentes
+                },
+                Nutricionista = usuario.Nutricionista == null ? null : new
+                {
+                    usuario.Nutricionista.Especialidade,
+                    usuario.Nutricionista.Descricao
+                }
+            };
+
+            return Ok(perfil);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
+        }
     }
-    catch (Exception ex)
-    {
-        return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
-    }
-}
 
 }
 

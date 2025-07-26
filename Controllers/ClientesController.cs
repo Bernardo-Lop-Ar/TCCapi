@@ -125,24 +125,53 @@ namespace HealthifyAPI.Controllers
             return _context.Clientes.Any(e => e.ClienteId == id);
         }
         [HttpPost("respostas")]
-        public async Task<IActionResult> PostRespostas([FromBody] List<QuestionarioResposta> respostas)
+        public async Task<IActionResult> PostRespostas([FromBody] List<QuestionarioRespostaDto> respostasDto)
         {
-            if (respostas == null || respostas.Count == 0)
-                return BadRequest("Nenhuma resposta enviada.");
-
-            try
+            if (respostasDto == null || !respostasDto.Any())
             {
-
-                await _context.QuestionarioRespostas.AddRangeAsync(respostas);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { message = "Respostas salvas com sucesso." });
+                return BadRequest("Nenhuma resposta foi enviada.");
             }
-            catch (Exception ex)
+
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                Console.WriteLine($"Erro ao salvar respostas: {ex.Message}");
-                return StatusCode(500, $"Erro ao salvar respostas: {ex.Message}");
+                try
+                {
+                    // Converte a lista de DTOs para a lista de Entidades do banco
+                    var respostasParaSalvar = respostasDto.Select(dto => new QuestionarioResposta
+                    {
+                        ClienteId = dto.ClienteId,
+                        PerguntaId = dto.PerguntaId,
+                        RespostaTexto = dto.RespostaTexto,
+                        DataResposta = dto.DataResposta
+                    }).ToList();
+
+                    await _context.QuestionarioRespostas.AddRangeAsync(respostasParaSalvar);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    return Ok(new { message = "Respostas salvas com sucesso." });
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    await transaction.RollbackAsync();
+                    var innerExceptionMessage = dbEx.InnerException?.Message ?? dbEx.Message;
+                    Console.WriteLine($"--- ERRO DE BANCO DE DADOS AO SALVAR RESPOSTAS ---");
+                    Console.WriteLine(innerExceptionMessage);
+                    Console.WriteLine($"-------------------------------------------------");
+                    return StatusCode(500, $"Erro de banco de dados: {innerExceptionMessage}");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    Console.WriteLine($"--- ERRO INESPERADO ---");
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine($"-----------------------");
+                    return StatusCode(500, $"Erro inesperado ao salvar respostas: {ex.Message}");
+                }
             }
         }
+
+
     }
 }
