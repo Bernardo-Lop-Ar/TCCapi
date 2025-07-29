@@ -171,6 +171,40 @@ namespace HealthifyAPI.Controllers
                 }
             }
         }
+        [HttpGet("cpf/{cpf}")]
+        public async Task<ActionResult<Cliente>> GetClientePorCpf(string cpf)
+        {
+            // Validação básica para garantir que um CPF foi enviado
+            if (string.IsNullOrWhiteSpace(cpf))
+            {
+                return BadRequest("O CPF é obrigatório.");
+            }
+
+            // Busca o cliente no banco de dados.
+            // Esta consulta assume que a entidade 'Cliente' tem uma propriedade de navegação 'Usuario'
+            // e que a entidade 'Usuario' tem a propriedade 'cpf'.
+            var cliente = await _context.Clientes
+                                        .Include(c => c.Usuario)
+                                        .FirstOrDefaultAsync(c => c.Usuario.cpf == cpf);
+
+            // Se nenhum cliente for encontrado com aquele CPF, retorna um erro 404 (Not Found).
+            if (cliente == null)
+            {
+                return NotFound("Nenhum cliente foi encontrado com o CPF fornecido.");
+            }
+
+            // Se encontrou, retorna os dados do cliente.
+            // Vamos retornar um objeto simplificado para não expor dados desnecessários.
+            var resultado = new
+            {
+                cliente.ClienteId,
+                Nome = cliente.Usuario.Nome,
+                Cpf = cliente.Usuario.cpf
+            };
+
+            return Ok(resultado);
+        }
+
 
 
     }

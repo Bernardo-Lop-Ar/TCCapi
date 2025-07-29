@@ -65,23 +65,47 @@ namespace HealthifyAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutNutricionista(int id, Nutricionista nutricionista)
+        public async Task<IActionResult> PutNutricionista(int id, [FromBody] NutricionistaUpdateDto nutricionistaDto)
         {
-            if (id != nutricionista.NutricionistaId) return BadRequest();
-
-
-            foreach (var key in ModelState.Keys.Where(k => k.StartsWith("Usuario")).ToList())
+            // Verifica se o ID da rota corresponde ao ID no corpo da requisição
+            if (id != nutricionistaDto.NutricionistaId)
             {
-                ModelState.Remove(key);
+                return BadRequest("O ID do nutricionista na URL não corresponde ao do corpo da requisição.");
             }
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            // Busca o registo original do nutricionista no banco de dados
+            var nutricionistaNoBanco = await _context.Nutricionistas.FindAsync(id);
 
-            _context.Entry(nutricionista).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return NoContent();
+            if (nutricionistaNoBanco == null)
+            {
+                return NotFound("Nutricionista não encontrado.");
+            }
+
+        
+            nutricionistaNoBanco.Especialidade = nutricionistaDto.Especialidade;
+            nutricionistaNoBanco.Descricao = nutricionistaDto.Descricao;
+
+            try
+            {
+                // Salva as alterações no banco de dados
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Trata erros de concorrência (se o registo foi alterado por outro processo)
+                if (!_context.Nutricionistas.Any(e => e.NutricionistaId == id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent(); // Retorna 204 No Content, indicando sucesso.
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNutricionista(int id)
@@ -105,6 +129,33 @@ namespace HealthifyAPI.Controllers
                 return NotFound($"Nenhuma resposta encontrada para o cliente com id {clienteId}");
 
             return respostas;
+        }
+
+        [HttpGet("cpf/{cpf}")]
+        public async Task<ActionResult> GetNutricionistaPorCpf(string cpf)
+        {
+            if (string.IsNullOrWhiteSpace(cpf))
+            {
+                return BadRequest("O CPF é obrigatório.");
+            }
+
+            var nutricionista = await _context.Nutricionistas
+                                        .Include(n => n.Usuario)
+                                        .FirstOrDefaultAsync(n => n.Usuario.cpf == cpf);
+
+            if (nutricionista == null)
+            {
+                return NotFound("Nenhum nutricionista foi encontrado com o CPF fornecido.");
+            }
+
+            var resultado = new
+            {
+                nutricionista.NutricionistaId,
+                Nome = nutricionista.Usuario.Nome,
+                Cpf = nutricionista.Usuario.cpf
+            };
+
+            return Ok(resultado);
         }
     }
 }

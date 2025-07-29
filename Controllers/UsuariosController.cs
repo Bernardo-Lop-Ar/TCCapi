@@ -223,71 +223,65 @@ public class UsuariosController : ControllerBase
 
         return Ok(cliente);
     }
-    [Authorize]
-    [HttpGet("perfil")]
-    public async Task<ActionResult<object>> GetPerfil()
+   [Authorize]
+[HttpGet("perfil")]
+public async Task<ActionResult<object>> GetPerfil()
+{
+    try
     {
-        try
+        var usuarioIdClaim = User.FindFirst("UsuarioId");
+        if (usuarioIdClaim == null)
+            return Unauthorized("Usuário não autenticado.");
+
+        if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
+            return Unauthorized("Usuário inválido.");
+
+        var usuario = await _context.Usuarios
+            .Include(u => u.Cliente)
+            .Include(u => u.Nutricionista) // Inclui os dados do nutricionista
+            .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
+
+        if (usuario == null)
+            return NotFound("Usuário não encontrado.");
+
+        // Montar objeto perfil para retornar apenas os dados necessários
+        var perfil = new
         {
-            var usuarioIdClaim = User.FindFirst("UsuarioId");
-            if (usuarioIdClaim == null)
-                return Unauthorized("Usuário não autenticado.");
-
-            if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
-                return Unauthorized("Usuário inválido.");
-
-            // Buscar usuário no banco incluindo dados relacionados, por exemplo Cliente ou Nutricionista
-            var usuario = await _context.Usuarios
-                .Include(u => u.Cliente) // Caso exista relacionamento Cliente
-                .Include(u => u.Nutricionista) // Caso exista relacionamento Nutricionista
-                .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
-
-            if (usuario == null)
-                return NotFound("Usuário não encontrado.");
-
-            // Montar objeto perfil para retornar apenas os dados necessários
-            var perfil = new
+            usuario.UsuarioId,
+            usuario.Nome,
+            usuario.Email,
+            usuario.telefone,
+            usuario.TipoUsuario,
+            usuario.cpf,
+            usuario.DataNascimento,
+            usuario.Sexo,
+            usuario.Endereco,
+            Cliente = usuario.Cliente, // Pode retornar o objeto inteiro se for simples
+            Nutricionista = usuario.Nutricionista == null ? null : new
             {
-                usuario.UsuarioId,
-                usuario.Nome,
-                usuario.Email,
-                usuario.telefone,
-                usuario.TipoUsuario,
-                usuario.cpf,
-                usuario.DataNascimento,
-                usuario.Sexo,
-                usuario.Endereco,
-                Cliente = usuario.Cliente == null ? null : new
-                {
-                    usuario.Cliente.Peso,
-                    usuario.Cliente.Altura,
-                    usuario.Cliente.Objetivo,
-                    usuario.Cliente.NivelAtividade,
-                    usuario.Cliente.PreferenciasAlimentares,
-                    usuario.Cliente.DoencasPreexistentes
-                },
-                Nutricionista = usuario.Nutricionista == null ? null : new
-                {
-                    usuario.Nutricionista.Especialidade,
-                    usuario.Nutricionista.Descricao
-                }
-            };
+                // --- CORREÇÃO PRINCIPAL AQUI ---
+                // Adicione a linha abaixo para incluir o ID do nutricionista
+                usuario.Nutricionista.NutricionistaId,
+                
+                usuario.Nutricionista.Especialidade,
+                usuario.Nutricionista.Descricao
+            }
+        };
 
-            return Ok(perfil);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
-        }
+        return Ok(perfil);
     }
-
+    catch (Exception ex)
+    {
+        return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
+    }
 }
+
 
 
 public class UsuarioLoginRequest
 {
     public string Email { get; set; }
     public string Senha { get; set; }
-}
+}}
 
 
