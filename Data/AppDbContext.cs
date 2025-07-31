@@ -16,7 +16,7 @@ namespace HealthifyAPI.Data
         public DbSet<PlanoReceita> PlanoReceitas { get; set; } = null!;
         public DbSet<ProgressoCliente> ProgressoCliente { get; set; } = null!;
         public DbSet<Pergunta> Perguntas { get; set; }
-
+        public DbSet<DiarioEntrada> DiarioEntradas { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<PlanoReceita>()
