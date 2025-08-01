@@ -42,21 +42,50 @@ namespace HealthifyAPI.Controllers
         };
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ConsultaDTO>>> GetConsultas(int? clienteId, int? nutricionistaId, string? status)
+        public async Task<ActionResult<IEnumerable<object>>> GetConsultas()
         {
-            var query = _context.Consultas
-                .Include(c => c.Cliente).ThenInclude(c => c.Usuario)
-                .Include(c => c.Nutricionista).ThenInclude(n => n.Usuario)
-                .AsQueryable();
+            var consultas = await _context.Consultas
+                                 .Include(c => c.Cliente)
+                                    .ThenInclude(cli => cli.Usuario)
+                                 .Include(c => c.Nutricionista)
+                                    .ThenInclude(nut => nut.Usuario)
+                                 .ToListAsync();
 
-            if (clienteId.HasValue) query = query.Where(c => c.ClienteId == clienteId.Value);
-            if (nutricionistaId.HasValue) query = query.Where(c => c.NutricionistaId == nutricionistaId.Value);
-            if (!string.IsNullOrEmpty(status)) query = query.Where(c => c.Status == status);
+            // Usamos .Select() para criar um novo objeto "limpo" para cada consulta,
+            // o que evita erros de referência circular e envia todos os dados necessários.
+            var resultado = consultas.Select(c => new
+            {
+                c.ConsultaId,
+                c.ClienteId,
+                c.NutricionistaId,
+                c.DataConsulta,
+                c.HoraConsulta,
+                c.TipoConsulta,
+                c.Status,
+                c.Observacoes,
+                Cliente = c.Cliente == null ? null : new
+                {
+                    c.Cliente.ClienteId,
+                    Usuario = c.Cliente.Usuario == null ? null : new
+                    {
+                        c.Cliente.Usuario.Nome,
+                        c.Cliente.Usuario.telefone
+                    }
+                },
+                // Incluímos os dados do nutricionista da mesma forma
+                Nutricionista = c.Nutricionista == null ? null : new
+                {
+                    c.Nutricionista.NutricionistaId,
+                    Usuario = c.Nutricionista.Usuario == null ? null : new
+                    {
+                        c.Nutricionista.Usuario.Nome,
+                        c.Nutricionista.Usuario.telefone
+                    }
+                }
+            });
 
-            var consultas = await query.ToListAsync();
-            return consultas.Select(MapToDTO).ToList();
+            return Ok(resultado);
         }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<ConsultaDTO>> GetConsulta(int id)
         {

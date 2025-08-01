@@ -39,8 +39,8 @@ public class UsuariosController : ControllerBase
     {
         ModelState.Remove("Cliente");
         ModelState.Remove("Nutricionista");
-        ModelState.Remove("Usuario");
 
+        // A sua validação inicial está correta e pode ser mantida.
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -48,6 +48,7 @@ public class UsuariosController : ControllerBase
 
         try
         {
+            // A sua lógica para verificar os campos também está correta.
             if (usuario == null ||
                 string.IsNullOrWhiteSpace(usuario.Nome) ||
                 string.IsNullOrWhiteSpace(usuario.Email) ||
@@ -59,35 +60,22 @@ public class UsuariosController : ControllerBase
                 string.IsNullOrWhiteSpace(usuario.Sexo) ||
                 string.IsNullOrWhiteSpace(usuario.Endereco))
             {
-                return BadRequest("Dados inválidos. Certifique-se de que 'nome', 'email', 'senha', 'CPF', 'telefone', 'dataNascimento', 'sexo' e 'endereco' estão preenchidos.");
+                return BadRequest("Dados inválidos. Certifique-se de que todos os campos estão preenchidos.");
             }
 
             _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Salva o utilizador para que ele receba um ID
 
+            // A sua lógica para criar Cliente ou Nutricionista está correta.
             if (usuario.TipoUsuario == "Cliente")
             {
-                var cliente = new Cliente
-                {
-                    UsuarioId = usuario.UsuarioId,
-                    Peso = null,
-                    Altura = null,
-                    Objetivo = null,
-                    NivelAtividade = null,
-                    PreferenciasAlimentares = null,
-                    DoencasPreexistentes = null
-                };
+                var cliente = new Cliente { UsuarioId = usuario.UsuarioId };
                 _context.Clientes.Add(cliente);
                 await _context.SaveChangesAsync();
             }
             else if (usuario.TipoUsuario == "Nutricionista")
             {
-                var nutricionista = new Nutricionista
-                {
-                    UsuarioId = usuario.UsuarioId,
-                    Especialidade = null,
-                    Descricao = null
-                };
+                var nutricionista = new Nutricionista { UsuarioId = usuario.UsuarioId };
                 _context.Nutricionistas.Add(nutricionista);
                 await _context.SaveChangesAsync();
             }
@@ -96,17 +84,23 @@ public class UsuariosController : ControllerBase
                 return BadRequest("Tipo de usuário inválido. Use 'Cliente' ou 'Nutricionista'.");
             }
 
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.UsuarioId }, usuario);
+            // --- CORREÇÃO PRINCIPAL AQUI ---
+            // Em vez de retornar o objeto 'usuario' completo, que causa o ciclo,
+            // retornamos um objeto anónimo simples com os dados essenciais.
+            var resultado = new
+            {
+                usuario.UsuarioId,
+                usuario.Nome,
+                usuario.Email,
+                usuario.TipoUsuario
+            };
+
+            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.UsuarioId }, resultado);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erro interno: {ex.Message}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"Detalhes do erro interno: {ex.InnerException.Message}");
-                Console.WriteLine($"Stack trace do erro interno: {ex.InnerException.StackTrace}");
-            }
-            return StatusCode(500, $"Erro interno: {ex.Message}");
+            Console.WriteLine($"Erro interno: {ex.InnerException?.Message ?? ex.Message}");
+            return StatusCode(500, $"Erro interno: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
 
@@ -223,65 +217,75 @@ public class UsuariosController : ControllerBase
 
         return Ok(cliente);
     }
-   [Authorize]
-[HttpGet("perfil")]
-public async Task<ActionResult<object>> GetPerfil()
-{
-    try
+    [Authorize]
+    [Authorize]
+    [HttpGet("perfil")]
+    public async Task<ActionResult<object>> GetPerfil()
     {
-        var usuarioIdClaim = User.FindFirst("UsuarioId");
-        if (usuarioIdClaim == null)
-            return Unauthorized("Usuário não autenticado.");
-
-        if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
-            return Unauthorized("Usuário inválido.");
-
-        var usuario = await _context.Usuarios
-            .Include(u => u.Cliente)
-            .Include(u => u.Nutricionista) // Inclui os dados do nutricionista
-            .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
-
-        if (usuario == null)
-            return NotFound("Usuário não encontrado.");
-
-        // Montar objeto perfil para retornar apenas os dados necessários
-        var perfil = new
+        try
         {
-            usuario.UsuarioId,
-            usuario.Nome,
-            usuario.Email,
-            usuario.telefone,
-            usuario.TipoUsuario,
-            usuario.cpf,
-            usuario.DataNascimento,
-            usuario.Sexo,
-            usuario.Endereco,
-            Cliente = usuario.Cliente, // Pode retornar o objeto inteiro se for simples
-            Nutricionista = usuario.Nutricionista == null ? null : new
-            {
-                // --- CORREÇÃO PRINCIPAL AQUI ---
-                // Adicione a linha abaixo para incluir o ID do nutricionista
-                usuario.Nutricionista.NutricionistaId,
-                
-                usuario.Nutricionista.Especialidade,
-                usuario.Nutricionista.Descricao
-            }
-        };
+            var usuarioIdClaim = User.FindFirst("UsuarioId");
+            if (usuarioIdClaim == null)
+                return Unauthorized("Usuário não autenticado.");
 
-        return Ok(perfil);
+            if (!int.TryParse(usuarioIdClaim.Value, out int usuarioId))
+                return Unauthorized("Usuário inválido.");
+
+            var usuario = await _context.Usuarios
+                .Include(u => u.Cliente)
+                .Include(u => u.Nutricionista)
+                .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
+
+            if (usuario == null)
+                return NotFound("Usuário não encontrado.");
+
+            // Montar objeto perfil para retornar apenas os dados necessários
+            var perfil = new
+            {
+                usuario.UsuarioId,
+                usuario.Nome,
+                usuario.Email,
+                usuario.telefone,
+                usuario.TipoUsuario,
+                usuario.cpf,
+                usuario.DataNascimento,
+                usuario.Sexo,
+                usuario.Endereco,
+
+                // CORREÇÃO AQUI: Criamos um objeto anônimo para Cliente para quebrar o ciclo
+                Cliente = usuario.Cliente == null ? null : new
+                {
+                    usuario.Cliente.ClienteId,
+                    usuario.Cliente.Peso,
+                    usuario.Cliente.Altura,
+                    usuario.Cliente.Objetivo,
+                    usuario.Cliente.NivelAtividade,
+                    usuario.Cliente.PreferenciasAlimentares,
+                    usuario.Cliente.DoencasPreexistentes
+                },
+
+                Nutricionista = usuario.Nutricionista == null ? null : new
+                {
+                    usuario.Nutricionista.NutricionistaId,
+                    usuario.Nutricionista.Especialidade,
+                    usuario.Nutricionista.Descricao
+                }
+            };
+
+            return Ok(perfil);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
+        }
     }
-    catch (Exception ex)
+
+
+    public class UsuarioLoginRequest
     {
-        return StatusCode(500, $"Erro ao buscar perfil: {ex.Message}");
+        public string Email { get; set; }
+        public string Senha { get; set; }
     }
 }
-
-
-
-public class UsuarioLoginRequest
-{
-    public string Email { get; set; }
-    public string Senha { get; set; }
-}}
 
 
