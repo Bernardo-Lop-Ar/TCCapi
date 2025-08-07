@@ -110,20 +110,88 @@ namespace HealthifyAPI.Controllers
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCliente(int id)
-        {
-            var cliente = await _context.Clientes.FindAsync(id);
-            if (cliente == null) return NotFound();
-            _context.Clientes.Remove(cliente);
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
+private bool ClienteExists(int id)
+{
+    return _context.Clientes.Any(e => e.ClienteId == id);
+}
 
-        private bool ClienteExists(int id)
+
+[HttpDelete("{id}")]
+public async Task<IActionResult> DeleteCliente(int id)
+{
+    // Usamos uma transação para garantir que tudo aconteça com sucesso, ou nada.
+    using (var transaction = await _context.Database.BeginTransactionAsync())
+    {
+        try
         {
-            return _context.Clientes.Any(e => e.ClienteId == id);
+            // 1. Encontra o cliente que queremos deletar, incluindo o usuário associado.
+            var clienteParaDeletar = await _context.Clientes
+                .Include(c => c.Usuario)
+                .FirstOrDefaultAsync(c => c.ClienteId == id);
+
+            if (clienteParaDeletar == null)
+            {
+                return NotFound("Cliente não encontrado.");
+            }
+
+            // 2. Encontra e remove TODOS os registros que dependem do Cliente.
+
+            // Remove as respostas do questionário associadas ao cliente.
+            var respostas = _context.QuestionarioRespostas.Where(qr => qr.ClienteId == id);
+            if (respostas.Any())
+            {
+                _context.QuestionarioRespostas.RemoveRange(respostas);
+            }
+
+            // --- ALTERAÇÃO FEITA AQUI ---
+            // Adiciona a lógica para apagar as Consultas associadas.
+            var consultas = _context.Consultas.Where(c => c.ClienteId == id);
+            if (consultas.Any())
+            {
+                _context.Consultas.RemoveRange(consultas);
+            }
+            // --- FIM DA ALTERAÇÃO ---
+
+            // ADICIONE AQUI a lógica para PlanosAlimentares, etc. se existirem.
+            // Exemplo:
+            // var planos = _context.PlanosAlimentares.Where(p => p.ClienteId == id);
+            // if (planos.Any())
+            // {
+            //     _context.PlanosAlimentares.RemoveRange(planos);
+            // }
+
+
+            // 3. Agora, remove o próprio Cliente.
+            _context.Clientes.Remove(clienteParaDeletar);
+
+            // 4. E por fim, remove o Usuário associado.
+            if (clienteParaDeletar.Usuario != null)
+            {
+                _context.Usuarios.Remove(clienteParaDeletar.Usuario);
+            }
+
+            // 5. Salva todas as remoções no banco de dados.
+            await _context.SaveChangesAsync();
+
+            // 6. Confirma a transação, tornando as exclusões permanentes.
+            await transaction.CommitAsync();
+
+            return NoContent(); // Retorna sucesso
         }
+        catch (Exception ex)
+        {
+            // Se qualquer passo falhar, desfaz tudo.
+            await transaction.RollbackAsync();
+            
+            // Log do erro para você ver no console do servidor.
+            Console.WriteLine($"--- ERRO AO EXCLUIR CLIENTE EM CASCATA (ID: {id}) ---");
+            Console.WriteLine(ex.ToString());
+            Console.WriteLine($"----------------------------------------------------");
+
+            return StatusCode(500, "Ocorreu um erro interno ao excluir o cliente e seus dados associados.");
+        }
+    }
+}
         [HttpPost("respostas")]
         public async Task<IActionResult> PostRespostas([FromBody] List<QuestionarioRespostaDto> respostasDto)
         {
